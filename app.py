@@ -1,11 +1,28 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, request, render_template, jsonify
+from estimator.ai_estimator import estimate_units
+from estimator.cornwall_rules import get_density_rules
+import json
 
-app = Flask(__name__, static_folder='.', static_url_path='')
+app = Flask(__name__)
 
-@app.route('/')
+@app.route("/")
 def index():
-    return send_from_directory('.', 'index.html')
+    return render_template("index.html")
 
-port = int(os.environ.get("PORT", 5000))
-app.run(host='0.0.0.0', port=port, debug=True)
+@app.route("/upload", methods=["POST"])
+def upload():
+    data = request.get_json()
+    polygon = data.get("geometry")
+    land_area_m2 = data.get("area_m2")
+
+    if not polygon or not land_area_m2:
+        return jsonify({"error": "Missing polygon or area"}), 400
+
+    result = estimate_units(land_area_m2)
+    return jsonify(result)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
